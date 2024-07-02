@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banco Verde</title>
+    <link rel="stylesheet" href="/style.css">
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Banco Verde</h1>
+    </header>
+    <main>
+        <div class="container">
+            <h2>Bem-vindo, João Silva</h2>
+            <div id="saldos">
+                <p>Saldo Conta Corrente: R$ <span id="saldoCorrente">1000</span></p>
+                <p>Saldo Conta Poupança: R$ <span id="saldoPoupanca">500</span></p>
+            </div>
+
+            <form id="transacoes">
+                <label for="valor">Valor:</label>
+                <input type="number" id="valor" required>
+                
+                <label for="tipoConta">Tipo de Conta:</label>
+                <select id="tipoConta">
+                    <option value="corrente">Corrente</option>
+                    <option value="poupanca">Poupança</option>
+                </select>
+
+                <button type="button" onclick="depositar()">Depositar</button>
+                <button type="button" onclick="sacar()">Sacar</button>
+                <button type="button" onclick="transferir()">Transferir</button>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody id="historico">
+                    <tr>
+                        <td>01/07/2024</td>
+                        <td>Depósito</td>
+                        <td>R$ 1000</td>
+                    </tr>
+                    <tr>
+                        <td>02/07/2024</td>
+                        <td>Saque</td>
+                        <td>R$ 200</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2024 Banco Verde. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        // Aspecto para logging
+        function logAspect(target, methodName, descriptor) {
+            const originalMethod = descriptor.value;
+            descriptor.value = function(...args) {
+                console.log(`Chamada do método ${methodName} com argumentos: ${args}`);
+                const result = originalMethod.apply(this, args);
+                console.log(`Resultado do método ${methodName}: ${result}`);
+                return result;
+            };
+            return descriptor;
+        }
+
+        // Função para aplicar o aspecto
+        function applyAspect(targetClass, methodName, aspectFunc) {
+            const descriptor = Object.getOwnPropertyDescriptor(targetClass.prototype, methodName);
+            aspectFunc(targetClass.prototype, methodName, descriptor);
+            Object.defineProperty(targetClass.prototype, methodName, descriptor);
+        }
+
+        class ContaBancaria {
+            constructor(titular) {
+                this.titular = titular;
+                this.contaCorrente = 1000;
+                this.contaPoupanca = 500;
+                this.atualizarSaldos();
+            }
+
+            @logAspect
+            depositar(valor, tipoConta) {
+                if (tipoConta === 'corrente') {
+                    this.contaCorrente += valor;
+                } else if (tipoConta === 'poupanca') {
+                    this.contaPoupanca += valor;
+                } else {
+                    console.log("Tipo de conta inválido. Use 'corrente' ou 'poupanca'.");
+                }
+                this.atualizarSaldos();
+            }
+
+            @logAspect
+            sacar(valor, tipoConta) {
+                if (tipoConta === 'corrente') {
+                    if (this.contaCorrente >= valor) {
+                        this.contaCorrente -= valor;
+                    } else {
+                        console.log("Saldo insuficiente na conta corrente.");
+                    }
+                } else if (tipoConta === 'poupanca') {
+                    if (this.contaPoupanca >= valor) {
+                        this.contaPoupanca -= valor;
+                    } else {
+                        console.log("Saldo insuficiente na conta poupança.");
+                    }
+                } else {
+                    console.log("Tipo de conta inválido. Use 'corrente' ou 'poupanca'.");
+                }
+                this.atualizarSaldos();
+            }
+
+            @logAspect
+            transferir(valor, deConta, paraConta) {
+                if (deConta === 'corrente' && paraConta === 'poupanca') {
+                    if (this.contaCorrente >= valor) {
+                        this.contaCorrente -= valor;
+                        this.contaPoupanca += valor;
+                    } else {
+                        console.log("Saldo insuficiente na conta corrente.");
+                    }
+                } else if (deConta === 'poupanca' && paraConta === 'corrente') {
+                    if (this.contaPoupanca >= valor) {
+                        this.contaPoupanca -= valor;
+                        this.contaCorrente += valor;
+                    } else {
+                        console.log("Saldo insuficiente na conta poupança.");
+                    }
+                } else {
+                    console.log("Transferência inválida. Verifique os tipos de conta.");
+                }
+                this.atualizarSaldos();
+            }
+
+            atualizarSaldos() {
+                document.getElementById('saldoCorrente').innerText = this.contaCorrente;
+                document.getElementById('saldoPoupanca').innerText = this.contaPoupanca;
+            }
+        }
+
+        // Aplicar o aspecto de logging aos métodos da ContaBancaria
+        applyAspect(ContaBancaria, 'depositar', logAspect);
+        applyAspect(ContaBancaria, 'sacar', logAspect);
+        applyAspect(ContaBancaria, 'transferir', logAspect);
+
+        let minhaConta = new ContaBancaria('João Silva');
+
+        function depositar() {
+            const valor = parseFloat(document.getElementById('valor').value);
+            const tipoConta = document.getElementById('tipoConta').value;
+            minhaConta.depositar(valor, tipoConta);
+        }
+
+        function sacar() {
+            const valor = parseFloat(document.getElementById('valor').value);
+            const tipoConta = document.getElementById('tipoConta').value;
+            minhaConta.sacar(valor, tipoConta);
+        }
+
+        function transferir() {
+            const valor = parseFloat(document.getElementById('valor').value);
+            minhaConta.transferir(valor, 'corrente', 'poupanca'); // Exemplo: transferir sempre da conta corrente para a poupança
+        }
+    </script>
+</body>
+</html>
